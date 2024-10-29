@@ -39,5 +39,6 @@ export const Constants = {
 
   // Chromia transaction batching
   CHROMIA_BATCH_SIZE: 50,
-  CHROMIA_MAX_BATCH_WAIT_MS: 10000, // 30 seconds max wait time
+  CHROMIA_MAX_BATCH_WAIT_MS: 10000, // 10 seconds max wait time
+  CHROMIA_BATCH_CHECK_INTERVAL_MS: 15000, // 15 seconds max wait time
 };

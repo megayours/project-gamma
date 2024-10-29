@@ -22,4 +22,3 @@ query is_event_processed(chain: name, address: byte_array, event_id: text) {
 query has_mint_occured(chain: name, address: byte_array, token_id: integer) {
   return tracked_token @? { .contract.chain == chain, .contract.address == address, .token_id == token_id } != null;
 }
-

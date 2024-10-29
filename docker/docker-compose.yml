@@ -29,5 +29,7 @@ services:
     command: ["chr", "node", "start", "--directory-chain-mock"]
 
   redis:
+    ports:
+      - "6379:6379"
     image: redis:alpine
 

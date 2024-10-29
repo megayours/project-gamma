@@ -1,14 +1,15 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { Logger } from '../utils/logger';
 import { ChromiaService } from './chromiaService';
 import { QueueService } from './queueService';
 import { Constants } from '../utils/constants';
 
 @Injectable()
-export class EventProcessorService implements OnModuleInit {
+export class EventProcessorService implements OnModuleInit, OnModuleDestroy {
   private processingLock = new AsyncLock();
   private operationBatch: Array<{ name: string; args: any[] }> = [];
   private batchStartTime: number = Date.now();
+  private batchCheckInterval: NodeJS.Timer;
 
   constructor(
     private chromiaService: ChromiaService,
@@ -16,7 +17,19 @@ export class EventProcessorService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    // Start the background batch checker
+    this.batchCheckInterval = setInterval(
+      () => this.checkAndPublishBatch(),
+      Constants.CHROMIA_BATCH_CHECK_INTERVAL_MS // e.g., 1000ms
+    );
     await this.startOperationProcessing();
+  }
+
+  async onModuleDestroy() {
+    // Clean up the interval when the service is destroyed
+    if (this.batchCheckInterval) {
+      clearInterval(this.batchCheckInterval);
+    }
   }
 
   private async startOperationProcessing() {
@@ -41,6 +54,8 @@ export class EventProcessorService implements OnModuleInit {
 
       if (this.shouldPublishBatch()) {
         await this.publishBatch();
+      } else {
+        Logger.debug(`EventProcessorService: Not publishing batch of ${this.operationBatch.length} operations`);
       }
 
       Logger.debug(`EventProcessorService: Finished processing operation: ${operation.name}`);
@@ -57,6 +72,7 @@ export class EventProcessorService implements OnModuleInit {
   }
 
   private async publishBatch(): Promise<void> {
+    Logger.debug(`EventProcessorService: Publishing batch of ${this.operationBatch.length} operations`);
     if (this.operationBatch.length === 0) return;
 
     const batchToProcess = [...this.operationBatch]; // Create a copy of the batch
@@ -71,6 +87,18 @@ export class EventProcessorService implements OnModuleInit {
       // Add failed operations back to the batch
       this.operationBatch.push(...batchToProcess);
       throw error;
+    }
+  }
+
+  private async checkAndPublishBatch(): Promise<void> {
+    try {
+      await this.processingLock.acquire('processing', async () => {
+        if (this.shouldPublishBatch()) {
+          await this.publishBatch();
+        }
+      });
+    } catch (error) {
+      Logger.error('Error in batch check interval:', error);
     }
   }
 }
