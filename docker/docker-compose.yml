@@ -16,8 +16,6 @@ services:
     environment:
       - POSTGRES_USER=postchain
       - POSTGRES_PASSWORD=postchain
-    ports:
-      - "5432:5432"
 
   tokenchain:
     image: registry.gitlab.com/chromaway/core-tools/chromia-cli/chr:0.20.12
@@ -34,5 +32,4 @@ services:
 
   redis:
     image: redis:alpine
-    ports:
-      - "6379:6379"
+

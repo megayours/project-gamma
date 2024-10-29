@@ -4,13 +4,13 @@
   "description": "NFT Event Oracle for processing blockchain events",
   "main": "dist/index.js",
   "scripts": {
-    "start": "node dist/index.js",
-    "build": "tsc",
-    "dev": "ts-node-dev --respawn src/index.ts",
-    "register:contract": "ts-node --transpile-only src/scripts/registerContract.ts",
-    "register:ethereum:pudgy": "npm run register:contract -- --chain ethereum --address 0xBd3531dA5CF5857e7CfAA92426877b022e612cf8 --project \"The Igloo Company\" --collection \"Pudgy Penguins\" --blockHeight 12876179 --type erc721",
-    "register:polygon:testnet:pudgy": "npm run register:contract -- --chain amoy --address 0xc5f7F51e9De3b92a5f2aD9Fd41c9e58C0Cd2F2A6 --project \"The Igloo Company\" --collection \"Pudgy Penguins\" --blockHeight 13636511 --type erc721",
-    "register:polygon:delabs": "npm run register:contract -- --chain polygon --address 0x670fd103b1a08628e9557cD66B87DeD841115190 --project \"DeLabs\" --collection \"y00ts\" --blockHeight 40833431 --type erc721"
+    "start": "bun run dist/index.js",
+    "build": "bun build src/index.ts --target=bun --outfile=dist/index.ts",
+    "dev": "bun --watch run src/index.ts",
+    "register:contract": "bun run src/scripts/registerContract.ts",
+    "register:ethereum:pudgy": "bun run register:contract -- --chain ethereum --address 0xBd3531dA5CF5857e7CfAA92426877b022e612cf8 --project \"The Igloo Company\" --collection \"Pudgy Penguins\" --blockHeight 12876179 --type erc721",
+    "register:polygon:testnet:pudgy": "bun run register:contract -- --chain amoy --address 0xc5f7F51e9De3b92a5f2aD9Fd41c9e58C0Cd2F2A6 --project \"The Igloo Company\" --collection \"Pudgy Penguins\" --blockHeight 13636511 --type erc721",
+    "register:polygon:delabs": "bun run register:contract -- --chain polygon --address 0x670fd103b1a08628e9557cD66B87DeD841115190 --project \"DeLabs\" --collection \"y00ts\" --blockHeight 40833431 --type erc721"
   },
   "dependencies": {
     "@nestjs/common": "^9.0.0",
@@ -34,9 +34,7 @@
     "@types/amqplib": "^0.8.2",
     "@types/node": "^22.7.7",
     "@types/yargs": "^17.0.33",
-    "hardhat": "^2.22.15",
-    "ts-node": "^10.9.2",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^5.6.3"
+    "bun-types": "latest",
+    "hardhat": "^2.22.15"
   }
 }

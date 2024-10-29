@@ -33,6 +33,8 @@ export class ChromiaService implements OnModuleInit {
       throw new Error('Postchain configuration is missing');
     }
 
+    Logger.log(`Connecting to Chromia at ${nodeUrl} with blockchainRID ${blockchainRid}`);
+
     this.client = await createClient({
       nodeUrlPool: [nodeUrl],
       blockchainRid,

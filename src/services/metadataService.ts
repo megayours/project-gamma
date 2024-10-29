@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Logger } from '../utils/logger';
 import { ContractService } from './contractService';
-import fetch from 'node-fetch';
 import { ChainName, ContractAddress, ContractType, TokenId } from '../types/blockchain';
 import { MetadataFetchError, TokenDoesNotExistError } from '../utils/errors';
 import { ChainConfigService } from '../config/chainConfig';
