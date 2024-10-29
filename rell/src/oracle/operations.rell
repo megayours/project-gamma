@@ -63,10 +63,12 @@ operation process_transfer_event(chain: name, address: byte_array, block_height:
 
 operation process_metadata_update(chain: name, address: byte_array, token_id: integer, metadata: json) {
   require_admin();
-  require(
+  val contract = require(
     contract @? { .chain == chain, .address == address },
     "Contract not found"
   );
+
+  update tracked_token @? { .contract == contract, .token_id == token_id } ( metadata );
 
   send_message(_format_topic(chain, address), yours.external.metadata_updated_message(
     token_id = token_id,

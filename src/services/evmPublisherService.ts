@@ -274,7 +274,9 @@ export class EvmPublisherService implements OnModuleInit {
       const newMetadata = await this.metadataService.fetchMetadataWithRetry(tokenUri);
       if (JSON.stringify(newMetadata) !== JSON.stringify(token.metadata)) {
         await this.chromiaService.updateTokenMetadata(token.chain, token.address, token.token_id, newMetadata);
-        Logger.log(`Updated metadata for token ${token.token_id} on contract ${token.address} (${token.chain})`);
+        Logger.log(`Old metadata: ${JSON.stringify(token.metadata)}`);
+        Logger.log(`New metadata: ${JSON.stringify(newMetadata)}`);
+        Logger.log(`Updated metadata for token ${token.token_id} on contract ${token.address.toString('hex')} (${token.chain})`);
       }
     } catch (error) {
       Logger.error(`Error processing metadata for token ${token.token_id} on contract ${token.address} (${token.chain}):`, error);
