@@ -256,6 +256,36 @@ export class EvmPublisherService implements OnModuleInit {
     }
   }
 
+  private isMetadataEqual(metadata1: any, metadata2: any): boolean {
+    // Handle null/undefined cases
+    if (metadata1 === metadata2) return true;
+    if (!metadata1 || !metadata2) return false;
+
+    // If either is not an object, do direct comparison
+    if (typeof metadata1 !== 'object' || typeof metadata2 !== 'object') {
+      return metadata1 === metadata2;
+    }
+
+    // Handle arrays
+    if (Array.isArray(metadata1) && Array.isArray(metadata2)) {
+      if (metadata1.length !== metadata2.length) return false;
+      return metadata1.every((item, index) => this.isMetadataEqual(item, metadata2[index]));
+    }
+
+    // Handle objects
+    const keys1 = Object.keys(metadata1);
+    const keys2 = Object.keys(metadata2);
+
+    if (keys1.length !== keys2.length) return false;
+
+    // Sort keys to ensure consistent comparison
+    const sortedKeys = keys1.sort();
+    return sortedKeys.every(key => {
+      if (!metadata2.hasOwnProperty(key)) return false;
+      return this.isMetadataEqual(metadata1[key], metadata2[key]);
+    });
+  }
+
   private async processTokenMetadata(token: TrackedToken): Promise<void> {
     try {
       const contract = this.contractService.getContract(this.chainConfigService.getChainIdByName(token.chain), token.address.toString('hex'));
@@ -272,10 +302,8 @@ export class EvmPublisherService implements OnModuleInit {
       }
 
       const newMetadata = await this.metadataService.fetchMetadataWithRetry(tokenUri);
-      if (JSON.stringify(newMetadata) !== JSON.stringify(token.metadata)) {
+      if (!this.isMetadataEqual(newMetadata, token.metadata)) {
         await this.chromiaService.updateTokenMetadata(token.chain, token.address, token.token_id, newMetadata);
-        Logger.log(`Old metadata: ${JSON.stringify(token.metadata)}`);
-        Logger.log(`New metadata: ${JSON.stringify(newMetadata)}`);
         Logger.log(`Updated metadata for token ${token.token_id} on contract ${token.address.toString('hex')} (${token.chain})`);
       }
     } catch (error) {
