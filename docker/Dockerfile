@@ -38,4 +38,4 @@ COPY .env .
 # run the app
 USER bun
 EXPOSE 50000/tcp
-ENTRYPOINT [ "bun", "run", "index.ts" ]
+ENTRYPOINT [ "bun", "run", "index.js" ]

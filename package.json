@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "start": "bun run dist/index.js",
-    "build": "bun build src/index.ts --target=bun --outfile=dist/index.ts",
+    "build": "nest build",
     "dev": "bun --watch run src/index.ts",
     "register:contract": "bun run src/scripts/registerContract.ts",
     "register:ethereum:pudgy": "bun run register:contract -- --chain ethereum --address 0xBd3531dA5CF5857e7CfAA92426877b022e612cf8 --project \"The Igloo Company\" --collection \"Pudgy Penguins\" --blockHeight 12876179 --type erc721",
@@ -29,6 +29,7 @@
     "yargs": "^17.7.2"
   },
   "devDependencies": {
+    "@nestjs/cli": "^10.4.5",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@nomicfoundation/hardhat-verify": "^2.0.11",
     "@types/amqplib": "^0.8.2",

@@ -10,7 +10,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
   private isInitialized: boolean = false;
   private readonly QUEUE_KEY = 'blockchain_operations';
   private readonly PROCESSING_QUEUE_KEY = 'blockchain_operations_processing';
-  private queueSizeLoggingInterval: NodeJS.Timeout;
+  private queueSizeLoggingInterval: ReturnType<typeof setInterval>;
 
   constructor(private configService: ConfigService) {
     this.redisClient = new Redis(this.configService.get<string>('REDIS_URL'));
