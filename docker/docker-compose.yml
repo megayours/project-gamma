@@ -1,0 +1,38 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+
+  postgres:
+    image: postgres:14.9-alpine3.18
+    environment:
+      - POSTGRES_USER=postchain
+      - POSTGRES_PASSWORD=postchain
+    ports:
+      - "5432:5432"
+
+  tokenchain:
+    image: registry.gitlab.com/chromaway/core-tools/chromia-cli/chr:0.20.12
+    ports:
+      - "7740:7740"
+    environment:
+      - CHR_DB_URL=jdbc:postgresql://postgres/postchain
+    volumes:
+      - ../chromia.yml:/usr/app/chromia.yml
+      - ../rell:/usr/app/rell
+    depends_on:
+      - postgres
+    command: ["chr", "node", "start", "--directory-chain-mock"]
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"

@@ -1,0 +1,58 @@
+definitions:
+  - &sender # Configuration for a chain that sends messages
+    gtx:
+      modules:
+        - "net.postchain.d1.icmf.IcmfSenderGTXModule"
+  - &receiver # Base configuration for a chain that receives messages
+    gtx:
+      modules:
+        - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
+    sync_ext:
+      - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
+
+blockchains:
+  project_gamma:
+    module: main
+    config:
+      <<: *sender
+
+libs:
+  ft4:
+    registry: https://gitlab.com/chromaway/ft4-lib.git
+    path: rell/src/lib/ft4
+    tagOrBranch: v1.0.0r
+    rid: x"FA487D75E63B6B58381F8D71E0700E69BEDEAD3A57D1E6C1A9ABB149FAC9E65F"
+    insecure: false
+  iccf:
+    registry: https://gitlab.com/chromaway/core/directory-chain
+    path: src/iccf
+    tagOrBranch: 1.32.2
+    rid: x"1D567580C717B91D2F188A4D786DB1D41501086B155A68303661D25364314A4D"
+    insecure: false
+  icmf:
+    registry: https://gitlab.com/chromaway/core/directory-chain
+    path: src/messaging/icmf
+    tagOrBranch: 1.32.2
+    rid: x"19D6BC28D527E6D2239843608486A84F44EDCD244E253616F13D1C65893F35F6"
+  yours:
+    registry: git@github.com:megayours/yours-protocol.git
+    path: src/lib/yours
+    tagOrBranch: main
+    rid: x"C01725A65BECB9D425AEC879F4D00D13A008C60B65B8EDE6EF23719F550162B2"
+    insecure: false
+
+compile:
+  rellVersion: 0.13.5
+  source: rell/src
+
+database:
+  schema: project_gamma
+  host: postgres
+
+deployments:
+  devnet1:
+    url: https://node0.devnet1.chromia.dev:7740
+    brid: x"58FE4D15AA5BDA450CC8E55F7ED63004AB1D2535A123F860D1643FD4108809E3"
+    container: gamma
+    chains:
+      project_gamma: x"A51784053063DF73F155F17C89D52BD3331968DBD5F351E41FD57A53856DFA5B"

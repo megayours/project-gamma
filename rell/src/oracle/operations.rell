@@ -1,0 +1,82 @@
+operation register_contract(chain: name, address: byte_array, project: text, collection: text, block_height: integer, type: text) {
+  require_admin();
+  create contract(chain, address, project, collection, block_height, type);
+}
+
+operation process_mint_event(chain: name, address: byte_array, block_height: integer, event_id: text, token_id: integer, token_name: text, metadata: json, to: byte_array, amount: integer) {
+  require_admin();
+  val contract = require(
+    contract @? { .chain == chain, .address == address },
+    "Contract not found"
+  );
+  require(contract.block_height <= block_height, "Provided block height %s is not greater than or equals the last processed block height %s".format(block_height, contract.block_height));
+
+  create processed_event(contract, event_id);
+  contract.block_height = block_height;
+
+  val tracked_token = tracked_token @? { .contract == contract, .token_id == token_id };
+  if (tracked_token == null) {
+    create tracked_token(contract, token_id, metadata, to);
+      send_message(_format_topic(chain, address), yours.external.mint_message(
+        project = contract.project,
+        collection = contract.collection,
+        token_id = token_id,
+        token_name = token_name,
+        metadata = metadata,
+        to = to,
+        amount = amount,
+        chain = chain,
+        contract = address,
+      ).to_gtv());
+  } else {
+    send_message(_format_topic(chain, address), yours.external.transfer_message(
+      token_id = token_id,
+      from = tracked_token.owner,
+      to = to,
+      amount = amount,
+      chain = chain,
+      contract = address,
+    ).to_gtv());
+  }
+}
+
+operation process_transfer_event(chain: name, address: byte_array, block_height: integer, event_id: text, token_id: integer, from: byte_array, to: byte_array, amount: integer) {
+  require_admin();
+  val contract = require(
+    contract @? { .chain == chain, .address == address },
+    "Contract not found"
+  );
+  require(contract.block_height <= block_height, "Provided block height %s is not greater than or equals the last processed block height %s".format(block_height, contract.block_height));
+
+  create processed_event(contract, event_id);
+  contract.block_height = block_height;
+
+  send_message(_format_topic(chain, address), yours.external.transfer_message(
+    token_id = token_id,
+    from = from,
+    to = to,
+    amount = amount,
+    chain = chain,
+    contract = address,
+  ).to_gtv());
+}
+
+operation process_metadata_update(chain: name, address: byte_array, token_id: integer, metadata: json) {
+  require_admin();
+  require(
+    contract @? { .chain == chain, .address == address },
+    "Contract not found"
+  );
+
+  send_message(_format_topic(chain, address), yours.external.metadata_updated_message(
+    token_id = token_id,
+    metadata = metadata,
+    chain = chain,
+    contract = address,
+  ).to_gtv());
+}
+
+function _format_topic(chain: name, address: byte_array) {
+  return "%s_%s_%s".format(yours.external.EVENT_PREFIX, chain.lower_case(), address.to_hex().lower_case());
+}
+

@@ -1,0 +1,9 @@
+@mount("oracle")
+module;
+
+namespace yours {
+  import lib.yours.*;
+  import lib.yours.external;
+}
+
+import lib.icmf.{ send_message };
