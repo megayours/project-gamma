@@ -22,3 +22,23 @@ query is_event_processed(chain: name, address: byte_array, event_id: text) {
 query has_mint_occured(chain: name, address: byte_array, token_id: integer) {
   return tracked_token @? { .contract.chain == chain, .contract.address == address, .token_id == token_id } != null;
 }
+
+query get_owned_tokens_of_contract(chain: name, address: byte_array, owner: byte_array) {
+  return tracked_token @* {
+    .contract.chain == chain,
+    .contract.address == address,
+    .owner == owner
+  } (
+    .token_id,
+    gtv.from_json(.metadata)
+  );
+}
+
+query get_owned_tokens(owner: byte_array) {
+  return tracked_token @* { .owner == owner } ( 
+    chain = .contract.chain,
+    contract = .contract.address,
+    token_id = .token_id,
+    metadata = gtv.from_json(.metadata) 
+  );
+}

@@ -1,52 +1,28 @@
 import { createClient, newSignatureProvider } from 'postchain-client';
 import { Logger } from '../utils/logger';
 import yargs from 'yargs';
-import { hideBin } from 'yargs/helpers';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
 
 async function registerContract() {
-  const argv = await yargs(hideBin(process.argv))
-    .option('chain', {
-      alias: 'c',
-      type: 'string',
-      description: 'Blockchain name',
-      demandOption: true
-    })
-    .option('address', {
-      alias: 'a',
-      type: 'string',
-      description: 'Contract address',
-      demandOption: true
-    })
-    .option('project', {
-      alias: 'p',
-      type: 'string',
-      description: 'Project name',
-      demandOption: true
-    })
-    .option('collection', {
-      alias: 'l',
-      type: 'string',
-      description: 'Collection name',
-      demandOption: true
-    })
-    .option('blockHeight', {
-      alias: 'b',
-      type: 'number',
-      description: 'Block height',
-      demandOption: true
-    })
-    .option('type', {
-      alias: 't',
-      type: 'string',
-      description: 'Contract type',
-      demandOption: true
-    })
-    .help()
-    .alias('help', 'h')
-    .parseAsync();
+  const argv = yargs(process.argv.slice(2))
+    .option('chain', { type: 'string', demandOption: true })
+    .option('address', { type: 'string', demandOption: true })
+    .option('project', { type: 'string', demandOption: true })
+    .option('collection', { type: 'string', demandOption: true })
+    .option('blockHeight', { type: 'number', demandOption: true })
+    .option('type', { type: 'string', demandOption: true })
+    .strict(false)
+    .parse() as {
+      chain: string;
+      address: string;
+      project: string;
+      collection: string;
+      blockHeight: number;
+      type: string;
+      _: string[];
+    };
 
   const nodeUrl = process.env.CHROMIA_NODE_URL;
   const blockchainRid = process.env.CHROMIA_BLOCKCHAIN_RID;

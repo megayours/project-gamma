@@ -8,10 +8,10 @@
     "build": "nest build",
     "dev": "bun --watch run src/index.ts",
     "register:contract": "bun run src/scripts/registerContract.ts",
-    "register:ethereum:pudgy": "bun run register:contract -- --chain ethereum --address 0xBd3531dA5CF5857e7CfAA92426877b022e612cf8 --project \"The Igloo Company\" --collection \"Pudgy Penguins\" --blockHeight 12876179 --type erc721",
-    "register:polygon:delabs": "bun run register:contract -- --chain polygon --address 0x670fd103b1a08628e9557cD66B87DeD841115190 --project \"DeLabs\" --collection \"y00ts\" --blockHeight 40833431 --type erc721",
-    "register:polygon:testnet:pudgy": "bun run register:contract -- --chain amoy --address 0xc5f7F51e9De3b92a5f2aD9Fd41c9e58C0Cd2F2A6 --project \"The Igloo Company\" --collection \"Pudgy Penguins\" --blockHeight 13636511 --type erc721",
-    "register:polygon:testnet:megayours:equipment": "bun run register:contract -- --chain amoy --address 0x8d3a7c58f5b90b669E076ae4b01247C1561559B5 --project \"MegaYours\" --collection \"Equipment\" --blockHeight 13766246 --type erc721"
+    "register:ethereum:pudgy": "npm run register:contract -- --chain ethereum --address 0xBd3531dA5CF5857e7CfAA92426877b022e612cf8 --project \"The Igloo Company\" --collection \"Pudgy Penguins\" --blockHeight 12876179 --type erc721",
+    "register:polygon:delabs": "npm run register:contract -- --chain polygon --address 0x670fd103b1a08628e9557cD66B87DeD841115190 --project 'De Labs' --collection \"y00ts\" --blockHeight 40833431 --type erc721",
+    "register:polygon:testnet:pudgy": "npm run register:contract -- --chain amoy --address 0xc5f7F51e9De3b92a5f2aD9Fd41c9e58C0Cd2F2A6 --project \"The Igloo Company\" --collection \"Pudgy Penguins\" --blockHeight 13636511 --type erc721",
+    "register:polygon:testnet:megayours:equipment": "npm run register:contract -- --chain amoy --address 0x8d3a7c58f5b90b669E076ae4b01247C1561559B5 --project \"MegaYours\" --collection \"Equipment\" --blockHeight 13766246 --type erc721"
   },
   "dependencies": {
     "@nestjs/common": "^9.0.0",
