@@ -8,7 +8,7 @@ entity contract {
 
 entity tracked_token {
   key contract, token_id: integer;
-  index mutable owner: byte_array;
+  mutable owner: byte_array;
   mutable metadata: json;
 }
 
