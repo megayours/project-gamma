@@ -23,6 +23,20 @@ query has_mint_occured(chain: name, address: byte_array, token_id: integer) {
   return tracked_token @? { .contract.chain == chain, .contract.address == address, .token_id == token_id } != null;
 }
 
+query get_token(chain: name, address: byte_array, token_id: integer) {
+  return tracked_token @? {
+    .contract.chain == chain,
+    .contract.address == address,
+    .token_id == token_id
+  } (
+    chain = .contract.chain,
+    address = .contract.address,
+    token_id = .token_id,
+    metadata = gtv.from_json(.metadata),
+    type = .contract.type
+  );
+}
+
 query get_owned_tokens_of_contract(chain: name, address: byte_array, owner: byte_array) {
   return tracked_token @* {
     .contract.chain == chain,
