@@ -31,7 +31,10 @@ query get_token(chain: name, address: byte_array, token_id: integer) {
   } (
     chain = .contract.chain,
     address = .contract.address,
+    project = .contract.project,
+    collection = .contract.collection,
     token_id = .token_id,
+    owner = .owner,
     metadata = gtv.from_json(.metadata),
     type = .contract.type
   );
@@ -43,8 +46,10 @@ query get_owned_tokens_of_contract(chain: name, address: byte_array, owner: byte
     .contract.address == address,
     .owner == owner
   } (
-    .token_id,
-    gtv.from_json(.metadata)
+    project = .contract.project,
+    collection = .contract.collection,
+    token_id = .token_id,
+    metadata = gtv.from_json(.metadata)
   );
 }
 
@@ -52,6 +57,8 @@ query get_owned_tokens(owner: byte_array) {
   return tracked_token @* { .owner == owner } ( 
     chain = .contract.chain,
     contract = .contract.address,
+    project = .contract.project,
+    collection = .contract.collection,
     token_id = .token_id,
     metadata = gtv.from_json(.metadata) 
   );
