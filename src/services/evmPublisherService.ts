@@ -6,7 +6,7 @@ import { ContractService } from './contractService';
 import { ChromiaService } from './chromiaService';
 import { MetadataService } from './metadataService';
 import { ContractEventListener } from './contractEventListener';
-import { Event, ContractInfo, TrackedToken, ChainId, ContractAddress, BlockNumber } from '../types/blockchain';
+import { Event, ContractInfo, TrackedToken, ChainId, ContractAddress, BlockNumber, TokenId } from '../types/blockchain';
 import { ContractNotFoundError, ProviderNotFoundError, TokenDoesNotExistError } from '../utils/errors';
 import { ethers } from 'ethers';
 import { createEventId } from '../utils/event';
@@ -135,7 +135,7 @@ export class EvmPublisherService implements OnModuleInit {
           break;
         }
 
-        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Backoff
       }
     }
   }
@@ -157,7 +157,7 @@ export class EvmPublisherService implements OnModuleInit {
           logIndex: ethEvent.index,
           from: this.safelyExtractAddress(ethEvent.topics[1]),
           to: this.safelyExtractAddress(ethEvent.topics[2]),
-          tokenId: Number.parseInt(ethEvent.topics[3]),
+          tokenId: BigInt(ethEvent.topics[3]),
         };
 
         const isProcessed = await this.chromiaService.isEventProcessed(chainName, contractAddress, event.id);
@@ -208,9 +208,9 @@ export class EvmPublisherService implements OnModuleInit {
         contractAddress,
         blockNumber,
         eventId,
-        event.tokenId,
+        typeof event.tokenId === 'bigint' ? event.tokenId : BigInt(event.tokenId),
         event.to,
-        1, // ERC721 always transfers 1 token
+        BigInt(1), // ERC721 always transfers 1 token
         metadata
       );
     } else {
@@ -219,10 +219,10 @@ export class EvmPublisherService implements OnModuleInit {
         contractAddress,
         blockNumber,
         eventId,
-        event.tokenId,
+        typeof event.tokenId === 'bigint' ? event.tokenId : BigInt(event.tokenId),
         event.from,
         event.to,
-        1 // ERC721 always transfers 1 token
+        BigInt(1) // ERC721 always transfers 1 token
       );
     }
   }

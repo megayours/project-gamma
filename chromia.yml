@@ -37,8 +37,8 @@ libs:
   yours:
     registry: git@github.com:megayours/yours-protocol.git
     path: src/lib/yours
-    tagOrBranch: main
-    rid: x"0AEBCE8CE6AC6BC2A3C6A3F1D62C936920D58F7D507B1C285B7C64CDDDF923AF"
+    tagOrBranch: feat/external-tokens
+    rid: x"84BB014B54AE9E2F7D9F1F8F20CCA11E2965B15B2EE70CA85BFB22B7A6C17683"
     insecure: false
 
 compile:
@@ -50,6 +50,9 @@ database:
   host: postgres
 
 deployments:
+  local:
+    url: http://localhost:7740
+    brid: x"58FE4D15AA5BDA450CC8E55F7ED63004AB1D2535A123F860D1643FD4108809E3"
   devnet1:
     url: https://node0.devnet1.chromia.dev:7740
     brid: x"58FE4D15AA5BDA450CC8E55F7ED63004AB1D2535A123F860D1643FD4108809E3"

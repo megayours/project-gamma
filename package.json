@@ -14,6 +14,7 @@
     "register:polygon:testnet:megayours:equipment": "npm run register:contract -- --chain amoy --address 0x8d3a7c58f5b90b669E076ae4b01247C1561559B5 --project \"MegaYours\" --collection \"Equipment\" --blockHeight 13766246 --type erc721"
   },
   "dependencies": {
+    "@chromia/ft4": "^1.0.1",
     "@nestjs/common": "^9.0.0",
     "@nestjs/config": "^3.2.3",
     "@nestjs/core": "^9.0.0",

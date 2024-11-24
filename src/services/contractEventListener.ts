@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 import { Logger } from '../utils/logger';
 import { ContractService } from './contractService';
 import { ContractInfo, ChainId, ContractAddress } from '../types/blockchain';
+import { Constants } from 'src/utils/constants';
 
 @Injectable()
 export class ContractEventListener {
@@ -57,7 +58,7 @@ export class ContractEventListener {
               Logger.error(`Error polling for events: ${error.message}`);
             }
           }
-        }, 15000); // Poll every 15 seconds
+        }, Constants.ONE_MINUTE_MS); // Poll every 60 seconds
 
         const errorHandler = (error: Error) => {
           Logger.error(`Error in provider for chain ${contractInfo.chainId}:`, error);

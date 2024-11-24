@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { Logger } from '../utils/logger';
 import { Constants } from '../utils/constants';
+import { ChainName, ContractAddress } from 'src/types/blockchain';
 
 @Injectable()
 export class QueueService implements OnModuleInit, OnModuleDestroy {
@@ -14,6 +15,10 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
 
   constructor(private configService: ConfigService) {
     this.redisClient = new Redis(this.configService.get<string>('REDIS_URL'));
+  }
+
+  queueKey(chain: ChainName, address: ContractAddress): string {
+    return `${this.QUEUE_KEY}:${chain}:${address}`;
   }
 
   async onModuleInit() {
@@ -133,9 +138,13 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  private BIGINT_PREFIX = 'BIGINT:';
+
   private serializeOperation(operation: { name: string; args: any[] }): string {
     return JSON.stringify(operation, (_, value) => {
-      if (Buffer.isBuffer(value)) {
+      if (typeof value === 'bigint') {
+        return `${this.BIGINT_PREFIX}${value.toString()}`;
+      } else if (Buffer.isBuffer(value)) {
         return {
           type: 'Buffer',
           data: value.toString('hex')
@@ -147,7 +156,10 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
 
   private deserializeOperation(operationJson: string): { name: string; args: any[] } {
     return JSON.parse(operationJson, (_, value) => {
-      if (value && value.type === 'Buffer' && value.data) {
+      if (typeof value === 'string' && value.startsWith(this.BIGINT_PREFIX)) {
+        Logger.debug(`Deserialized bigint: ${value.replace(this.BIGINT_PREFIX, '')}`);
+        return BigInt(value.replace(this.BIGINT_PREFIX, ''));
+      } else if (value && value.type === 'Buffer' && value.data) {
         return Buffer.from(value.data, 'hex');
       }
       return value;
