@@ -161,15 +161,14 @@ export class EvmPublisherService implements OnModuleInit {
         };
 
         const isProcessed = await this.chromiaService.isEventProcessed(chainName, contractAddress, event.id);
-
         if (isProcessed) {
-          Logger.debug(`Event already processed: ${event.id}`);
+          Logger.log(`Event already processed: ${event.id}`);
           return;
         }
 
         const operation = await this.createOperation(event);
         await this.queueService.publishOperation(operation);
-        Logger.log(`Operation published to queue: ${operation.name}`);
+        Logger.log(`Published to queue: ${operation.name}, chain: ${chainName}, contract: ${contractAddress}, block: ${event.blockNumber}, tokenId: ${event.tokenId}`);
       }
     } catch (error) {
       if (error instanceof TokenDoesNotExistError) {

@@ -117,12 +117,37 @@ export class ChromiaService implements OnModuleInit {
 
   async batchProcessEvents(operations: Array<{ name: string; args: any[] }>): Promise<void> {
     await this.ensureInitialized();
+    
     try {
+      // First, check all operations in parallel
+      const operationChecks = await Promise.all(
+        operations.map(async operation => {
+          if (operation.name === 'tokens.process_mint_event' || operation.name === 'tokens.process_transfer_event') {
+            const isProcessed = await this.isEventProcessed(
+              operation.args[0],  // chain
+              operation.args[1].toString('hex'),  // address
+              operation.args[3]   // eventId
+            );
+            return !isProcessed;
+          }
+          return true; // Include non-event operations
+        })
+      );
+
+      // Filter operations based on the check results
+      const unprocessedOperations = operations.filter((_, index) => operationChecks[index]);
+
+      if (unprocessedOperations.length === 0) {
+        Logger.debug('All operations were already processed, skipping batch');
+        return;
+      }
+
       await this.client.signAndSendUniqueTransaction({
-        operations: operations,
+        operations: unprocessedOperations,
         signers: [this.signatureProvider.pubKey],
       }, this.signatureProvider);
-      Logger.log(`Processed batch of ${operations.length} events`);
+      
+      Logger.log(`Processed batch of ${unprocessedOperations.length} events (${operations.length - unprocessedOperations.length} were already processed)`);
     } catch (error) {
       Logger.error('Error processing batch of events:', error);
       throw error;

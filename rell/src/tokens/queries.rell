@@ -27,7 +27,7 @@ query list_minted_tokens(after_rowid: integer, take: integer) {
 }
 
 query is_event_processed(chain: name, address: byte_array, event_id: text) {
-  return processed_event @? { .contract.chain.name == chain, .contract.address == address, .event_id == event_id };
+  return processed_event @? { .contract.chain.name == chain.lower_case(), .contract.address == address, .event_id == event_id } != null;
 }
 
 query has_mint_occured(chain: name, address: byte_array, token_id: big_integer) {
@@ -40,7 +40,7 @@ query has_mint_occured(chain: name, address: byte_array, token_id: big_integer) 
 
 query get_token(chain: name, address: byte_array, token_id: big_integer) {
   return yours.external.external_token @? {
-    .chain == chain,
+    .chain == chain.lower_case(),
     .contract == address,
     .token.id == token_id
   } (
@@ -59,7 +59,7 @@ query get_owned_tokens_of_contract(chain: name, address: byte_array, owner: byte
   return (et: yours.external.external_token, tb: yours.token_balance) @* {
     et.token == tb.token,
     tb.account.id == owner,
-    et.chain == chain,
+    et.chain == chain.lower_case(),
     et.contract == address
   } (
     project = et.token.collection.project.name,
