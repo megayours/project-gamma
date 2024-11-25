@@ -37,8 +37,8 @@ libs:
   yours:
     registry: git@github.com:megayours/yours-protocol.git
     path: src/lib/yours
-    tagOrBranch: feat/external-tokens
-    rid: x"84BB014B54AE9E2F7D9F1F8F20CCA11E2965B15B2EE70CA85BFB22B7A6C17683"
+    tagOrBranch: main
+    rid: x"4DE33A165E6B7527D4DA2BEF50F97C366A7A8BA5BFCB185AA5473E10758293BF"
     insecure: false
 
 compile:

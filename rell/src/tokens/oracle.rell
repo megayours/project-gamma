@@ -25,7 +25,7 @@ operation process_mint_event(_chain: name, address: byte_array, block_height: in
   val token_info = yours.token_info(
     project,
     collection = contract.collection,
-    type = yours.token_type.external_onchain,
+    type = yours.token_type.external,
     name = token_name,
     modules = []
   );
