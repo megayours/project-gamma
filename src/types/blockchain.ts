@@ -3,7 +3,7 @@ export type ChainName = string;
 export type ContractAddress = string;
 export type TransactionHash = string;
 export type BlockNumber = number;
-export type TokenId = number;
+export type TokenId = bigint;
 export type ContractType = 'erc721' | 'erc1155';
 
 export interface ChainConfig {
@@ -29,7 +29,7 @@ export interface Event {
   logIndex: number;
   from: string;
   to: string;
-  tokenId: number;
+  tokenId: TokenId;
 }
 
 export type ContractInfo = {

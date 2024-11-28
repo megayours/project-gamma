@@ -1,4 +1,4 @@
-import { TokenId } from "src/types/blockchain";
+import { TokenId } from "../types/blockchain";
 
 export class AppError extends Error {
   constructor(message: string, public code: string) {

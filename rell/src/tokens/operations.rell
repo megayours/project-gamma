@@ -1,0 +1,19 @@
+@extend(ft4.auth.auth_handler)
+function () = ft4.auth.add_auth_handler(
+  scope = rell.meta(register_contract).mount_name,
+  flags = ["T"]
+);
+
+operation register_contract(
+  _chain: name,
+  address: byte_array,
+  project: text,
+  collection: text,
+  block_height: integer,
+  type: text
+) {
+  ft4.auth.authenticate();
+  val name = _chain.lower_case();
+  val chain = require(chain @? { .name == name }, "Chain not found");
+  create contract(chain, address, project, collection, block_height, type);
+}

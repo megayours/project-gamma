@@ -5,7 +5,7 @@ import { createClient, IClient, newSignatureProvider, SignatureProvider } from '
 import { MetadataService } from './metadataService';
 import { ChainConfigService } from '../config/chainConfig';
 import { ContractInfo, ContractType, TrackedToken, ChainName, ContractAddress, TokenId } from '../types/blockchain';
-import { Constants } from '../utils/constants';
+import { assert } from 'console';
 
 @Injectable()
 export class ChromiaService implements OnModuleInit {
@@ -49,7 +49,7 @@ export class ChromiaService implements OnModuleInit {
   async getContractsToMonitor(): Promise<ContractInfo[]> {
     await this.ensureInitialized();
       try {
-        const contracts = await this.client.query<{ chain: string, address: Buffer, block_height: number, type: ContractType }[]>('oracle.list_contracts');
+        const contracts = await this.client.query<{ chain: string, address: Buffer, block_height: number, type: ContractType }[]>('tokens.list_contracts');
       return contracts.map(contract => ({
         chainId: this.chainConfigService.getChainIdByName(contract.chain),
         address: `0x${contract.address.toString('hex')}`,
@@ -71,26 +71,26 @@ export class ChromiaService implements OnModuleInit {
   async isEventProcessed(chain: string, address: string, eventId: string): Promise<boolean> {
     try {
       Logger.debug(`Checking if event is processed: ${eventId}`);
-      return await this.client.query<boolean>('oracle.is_event_processed', { chain, address: Buffer.from(address.replace('0x', ''), 'hex'), event_id: eventId });
+      return await this.client.query<boolean>('tokens.is_event_processed', { chain, address: Buffer.from(address.replace('0x', ''), 'hex'), event_id: eventId });
     } catch (error) {
       Logger.error(`Error checking if event is processed: ${error instanceof Error ? error.message : 'Unknown error'}`, error);
       return false;
     }
   }
 
-  async hasMintOccured(chain: string, address: string, tokenId: number): Promise<boolean> {
-    return this.client.query<boolean>('oracle.has_mint_occured', { chain, address: Buffer.from(address.replace('0x', ''), 'hex'), token_id: tokenId });
+  async hasMintOccured(chain: string, address: string, tokenId: TokenId): Promise<boolean> {
+    return this.client.query<boolean>('tokens.has_mint_occured', { chain, address: Buffer.from(address.replace('0x', ''), 'hex'), token_id: tokenId });
   }
 
   async getKnownTokens(afterRowId: number, take: number): Promise<TrackedToken[]> {
     await this.ensureInitialized();
-    return this.client.query<TrackedToken[]>('oracle.list_minted_tokens', { after_rowid: afterRowId, take });
+    return this.client.query<TrackedToken[]>('tokens.list_minted_tokens', { after_rowid: afterRowId, take });
   }
 
-  async updateTokenMetadata(chain: string, address: Buffer, tokenId: number, metadata: any): Promise<void> {
+  async updateTokenMetadata(chain: string, address: Buffer, tokenId: TokenId, metadata: any): Promise<void> {
     await this.ensureInitialized();
     await this.client.signAndSendUniqueTransaction({
-      name: 'oracle.process_metadata_update',
+      name: 'tokens.process_metadata_update',
       args: [chain, address, tokenId, JSON.stringify(metadata)],
     }, this.signatureProvider);
   }
@@ -99,7 +99,7 @@ export class ChromiaService implements OnModuleInit {
     await this.ensureInitialized();
     try {
       await this.client.signAndSendUniqueTransaction({
-        name: 'oracle.register_contract',
+        name: 'tokens.register_contract',
         args: [
           chain,
           Buffer.from(address.replace('0x', ''), 'hex'),
@@ -117,22 +117,47 @@ export class ChromiaService implements OnModuleInit {
 
   async batchProcessEvents(operations: Array<{ name: string; args: any[] }>): Promise<void> {
     await this.ensureInitialized();
+    
     try {
+      // First, check all operations in parallel
+      const operationChecks = await Promise.all(
+        operations.map(async operation => {
+          if (operation.name === 'tokens.process_mint_event' || operation.name === 'tokens.process_transfer_event') {
+            const isProcessed = await this.isEventProcessed(
+              operation.args[0],  // chain
+              operation.args[1].toString('hex'),  // address
+              operation.args[3]   // eventId
+            );
+            return !isProcessed;
+          }
+          return true; // Include non-event operations
+        })
+      );
+
+      // Filter operations based on the check results
+      const unprocessedOperations = operations.filter((_, index) => operationChecks[index]);
+
+      if (unprocessedOperations.length === 0) {
+        Logger.debug('All operations were already processed, skipping batch');
+        return;
+      }
+
       await this.client.signAndSendUniqueTransaction({
-        operations: operations,
+        operations: unprocessedOperations,
         signers: [this.signatureProvider.pubKey],
       }, this.signatureProvider);
-      Logger.log(`Processed batch of ${operations.length} events`);
+      
+      Logger.log(`Processed batch of ${unprocessedOperations.length} events (${operations.length - unprocessedOperations.length} were already processed)`);
     } catch (error) {
       Logger.error('Error processing batch of events:', error);
       throw error;
     }
   }
 
-  createMintEventOperation(chain: string, address: string, blockNumber: number, eventId: string, tokenId: number, to: string, amount: number, metadata: any): { name: string; args: any[] } {
+  createMintEventOperation(chain: string, address: string, blockNumber: number, eventId: string, tokenId: TokenId, to: string, amount: bigint, metadata: any): { name: string; args: any[] } {
     const tokenName = metadata.name || `Token ${tokenId}`;
     return {
-      name: 'oracle.process_mint_event',
+      name: 'tokens.process_mint_event',
       args: [
         chain,
         Buffer.from(address.replace('0x', ''), 'hex'),
@@ -147,9 +172,9 @@ export class ChromiaService implements OnModuleInit {
     };
   }
 
-  createTransferEventOperation(chain: string, address: string, blockNumber: number, eventId: string, tokenId: number, from: string, to: string, amount: number): { name: string; args: any[] } {
+  createTransferEventOperation(chain: string, address: string, blockNumber: number, eventId: string, tokenId: bigint, from: string, to: string, amount: bigint): { name: string; args: any[] } {
     return {
-      name: 'oracle.process_transfer_event',
+      name: 'tokens.process_transfer_event',
       args: [
         chain,
         Buffer.from(address.replace('0x', ''), 'hex'),
@@ -165,7 +190,7 @@ export class ChromiaService implements OnModuleInit {
 
   createMetadataUpdateOperation(chain: ChainName, address: ContractAddress, tokenId: TokenId, metadata: any): { name: string; args: any[] } {
     return {
-      name: 'oracle.process_metadata_update',
+      name: 'tokens.process_metadata_update',
       args: [chain, Buffer.from(address.replace('0x', ''), 'hex'), tokenId, JSON.stringify(metadata)],
     };
   }

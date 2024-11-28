@@ -1,15 +1,13 @@
+entity chain {
+  key name;
+}
+
 entity contract {
-  key chain: name, address: byte_array;
+  key chain, address: byte_array;
   mutable block_height: integer;
   project: text;
   collection: text;
   type: text;
-}
-
-entity tracked_token {
-  key contract, token_id: integer;
-  mutable owner: byte_array;
-  mutable metadata: json;
 }
 
 entity processed_event {

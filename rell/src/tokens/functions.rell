@@ -1,0 +1,7 @@
+function require_oracle() {
+
+}
+
+function _format_topic(chain: name, address: byte_array) {
+  return "%s_%s_%s".format(yours.external.EVENT_PREFIX, chain.lower_case(), address.to_hex().lower_case());
+}
