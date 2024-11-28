@@ -3,7 +3,7 @@ import { ethers } from 'ethers';
 import { Logger } from '../utils/logger';
 import { ContractService } from './contractService';
 import { ContractInfo, ChainId, ContractAddress } from '../types/blockchain';
-import { Constants } from 'src/utils/constants';
+import { Constants } from '../utils/constants';
 
 @Injectable()
 export class ContractEventListener {

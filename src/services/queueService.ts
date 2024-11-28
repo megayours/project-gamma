@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { Logger } from '../utils/logger';
 import { Constants } from '../utils/constants';
-import { ChainName, ContractAddress } from 'src/types/blockchain';
 
 @Injectable()
 export class QueueService implements OnModuleInit, OnModuleDestroy {
