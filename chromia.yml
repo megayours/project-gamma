@@ -11,7 +11,13 @@ definitions:
       - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
 
 blockchains:
+  # Old - to be removed after demo
   project_gamma:
+    module: main
+    config:
+      <<: *sender
+  # New
+  gamma:
     module: main
     config:
       <<: *sender
@@ -38,7 +44,7 @@ libs:
     registry: git@github.com:megayours/yours-protocol.git
     path: src/lib/yours
     tagOrBranch: main
-    rid: x"4DE33A165E6B7527D4DA2BEF50F97C366A7A8BA5BFCB185AA5473E10758293BF"
+    rid: x"472E95906E7B4A88A2D47D4D74C319F6ECB139EF0538EB217400450E79CF9146"
     insecure: false
 
 compile:
@@ -53,9 +59,17 @@ deployments:
   local:
     url: http://localhost:7740
     brid: x"58FE4D15AA5BDA450CC8E55F7ED63004AB1D2535A123F860D1643FD4108809E3"
+  # Old - to be removed after demo
   devnet1:
     url: https://node0.devnet1.chromia.dev:7740
     brid: x"58FE4D15AA5BDA450CC8E55F7ED63004AB1D2535A123F860D1643FD4108809E3"
     container: gamma
     chains:
       project_gamma: x"0C034CAB6586CD4F38EAF56721905BA388762906CA75C0C67650F9AB2E69C7BC"
+  # New
+  devnet:
+    url: https://node0.devnet1.chromia.dev:7740
+    brid: x"58FE4D15AA5BDA450CC8E55F7ED63004AB1D2535A123F860D1643FD4108809E3"
+    container: gamma
+    chains:
+      gamma: x"EBA63AB261ECB30EC13413880D5444EFB5D8ADCCCE6C61EC3BC92A7D6053347B"
