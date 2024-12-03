@@ -24,6 +24,11 @@ export class ChainConfigService {
         chainName: 'amoy',
         rpcUrl: this.configService.get<string>('POLYGON_AMOY_RPC_URL') || '',
       },
+      {
+        chainId: 97,
+        chainName: 'bsc_testnet',
+        rpcUrl: this.configService.get<string>('BSC_TESTNET_RPC_URL') || '',
+      }
       // Add more chains as needed
     ];
 
