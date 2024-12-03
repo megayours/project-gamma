@@ -206,7 +206,6 @@ export class EvmPublisherService implements OnModuleInit {
       blockNumber,
       eventId,
       typeof event.tokenId === 'bigint' ? event.tokenId : BigInt(event.tokenId),
-      event.from,
       event.to,
       BigInt(1) // ERC721 always transfers 1 token
     );

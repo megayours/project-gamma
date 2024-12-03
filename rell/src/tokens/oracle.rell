@@ -5,7 +5,7 @@ operation register_chain(_chain: name) {
   create chain(chain);
 }
 
-operation process_transfer_event(_chain: name, address: byte_array, block_height: integer, event_id: text, token_id: big_integer, from: byte_array, to: byte_array, amount: big_integer) {
+operation process_transfer_event(_chain: name, address: byte_array, block_height: integer, event_id: text, token_id: big_integer, to: byte_array, amount: big_integer) {
   require_oracle();
 
   val chain = _chain.lower_case();
@@ -25,16 +25,13 @@ operation process_transfer_event(_chain: name, address: byte_array, block_height
   }
 
   val token = external_token.token;
-  val from_account = require(
-    ft4.accounts.account @? { .id == from },
-    "Unable to process transfer event for %s:%s:%s. From account not found: %s when it should have been created at mint/previous transfer time".format(chain, address, token_id.to_text(), from)
-  );
+  val from_account = external_token.owner;
   val to_account = yours.external._ensure_evm_account(to);
   yours._transfer(token, yours.transfer_info(from = from_account, to = to_account, amount = amount));
 
   send_message(_format_topic(chain, address), yours.external.transfer_message(
     token_id = token_id,
-    from = from,
+    from = from_account.id,
     to = to,
     amount = amount,
     chain = chain,

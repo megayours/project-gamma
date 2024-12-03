@@ -172,7 +172,7 @@ export class ChromiaService implements OnModuleInit {
     };
   }
 
-  createTransferEventOperation(chain: string, address: string, blockNumber: number, eventId: string, tokenId: bigint, from: string, to: string, amount: bigint): { name: string; args: any[] } {
+  createTransferEventOperation(chain: string, address: string, blockNumber: number, eventId: string, tokenId: bigint, to: string, amount: bigint): { name: string; args: any[] } {
     return {
       name: 'tokens.process_transfer_event',
       args: [
@@ -181,7 +181,6 @@ export class ChromiaService implements OnModuleInit {
         blockNumber,
         eventId,
         tokenId,
-        Buffer.from(from.replace('0x', ''), 'hex'),
         Buffer.from(to.replace('0x', ''), 'hex'),
         amount,
       ],
