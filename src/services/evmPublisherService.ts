@@ -238,7 +238,7 @@ export class EvmPublisherService implements OnModuleInit {
         Logger.debug(`Found ${tokens.length} tokens to check for metadata updates`);
         if (tokens.length === 0) {
           afterRowId = 0; // Reset to start
-          await new Promise(resolve => setTimeout(resolve, 60000)); // Wait for 1 minute before restarting
+          await new Promise(resolve => setTimeout(resolve, 6_000_000)); // Wait for 1 hour before restarting
           continue;
         }
 
@@ -247,7 +247,7 @@ export class EvmPublisherService implements OnModuleInit {
         }
 
         afterRowId = tokens[tokens.length - 1].rowid;
-        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay between batches
+        await new Promise(resolve => setTimeout(resolve, 5000)); // 5 second delay between batches
       } catch (error) {
         Logger.error('Error in metadata update process:', error);
         await new Promise(resolve => setTimeout(resolve, 60000)); // Wait for 1 minute before retrying
