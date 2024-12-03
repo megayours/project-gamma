@@ -42,7 +42,8 @@ export type ContractInfo = {
 export type TrackedToken = {
   chain: ChainName;
   address: Buffer;
-  type: ContractType;
+  type: 'external';
+  contract_type: ContractType;
   token_id: TokenId;
   rowid: number;
   metadata: any;

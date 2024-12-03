@@ -294,7 +294,7 @@ export class EvmPublisherService implements OnModuleInit {
 
       const addressHex = toAddressHexFromBuffer(token.address);
 
-      const tokenUri = await this.metadataService.getTokenUri(token.chain, addressHex, token.type, token.token_id);
+      const tokenUri = await this.metadataService.getTokenUri(token.chain, addressHex, token.contract_type, token.token_id);
       if (!tokenUri) {
         Logger.error(`TokenURI not found for token ${token.token_id} on contract ${addressHex} (${token.chain})`);
         return;

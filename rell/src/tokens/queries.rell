@@ -14,15 +14,18 @@ query list_contracts() {
 }
 
 query list_minted_tokens(after_rowid: integer, take: integer) {
-  return yours.external.external_token @* { 
-    .rowid > rowid(after_rowid)
+  return (c: contract, et: yours.external.external_token) @* { 
+    et.rowid > rowid(after_rowid),
+    c.chain.name == et.chain,
+    c.address == et.contract
   } ( 
-    chain = .chain, 
-    address = .contract, 
-    token_id = .token.id,
-    rowid = .rowid,
-    metadata = yours.get_metadata(.token),
-    type = .token.type
+    chain = et.chain, 
+    address = et.contract, 
+    token_id = et.token.id,
+    rowid = et.rowid,
+    metadata = yours.get_metadata(et.token),
+    contract_type = c.type,
+    type = et.token.type
   ) limit take;
 }
 
