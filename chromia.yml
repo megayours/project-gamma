@@ -12,10 +12,10 @@ definitions:
 
 blockchains:
   # Old - to be removed after demo
-  project_gamma:
-    module: main
-    config:
-      <<: *sender
+  # project_gamma:
+  #   module: main
+  #   config:
+  #     <<: *sender
   # New
   gamma:
     module: main

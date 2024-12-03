@@ -8,15 +8,27 @@ import { Constants } from '../utils/constants';
 export class QueueService implements OnModuleInit, OnModuleDestroy {
   private redisClient: Redis;
   private isInitialized: boolean = false;
+  private readonly RETRY_DELAY_MS; // Configurable retry delay
   private readonly QUEUE_KEY = 'blockchain_operations';
   private readonly PROCESSING_QUEUE_KEY = 'blockchain_operations_processing';
   private readonly FAILED_QUEUE_KEY = 'blockchain_operations_failed';
   private queueSizeLoggingInterval: ReturnType<typeof setInterval>;
+  private pausedQueues: Map<string, number> = new Map(); // Track paused queues and their resume time
   private readonly BIGINT_PREFIX = 'BIGINT:';
   private readonly PROCESSED_EVENTS_SET = 'processed_events';
 
+  // Queue key helpers
+  private getQueueKey(chain: string, contract: string, type: 'main' | 'processing' | 'failed' = 'main'): string {
+    return `queue:${chain}:${contract}:${type}`;
+  }
+
+  private getProcessedSetKey(chain: string, contract: string): string {
+    return `processed:${chain}:${contract}`;
+  }
+
   constructor(private configService: ConfigService) {
     this.redisClient = new Redis(this.configService.get<string>('REDIS_URL'));
+    this.RETRY_DELAY_MS = this.configService.get<number>('QUEUE_RETRY_DELAY_MS', 5000);
   }
 
   async onModuleInit() {
@@ -57,20 +69,27 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async recoverInProgressOperations() {
-    const processingOps = await this.redisClient.zrange(this.PROCESSING_QUEUE_KEY, 0, -1, 'WITHSCORES');
-    if (processingOps.length > 0) {
-      Logger.log(`Recovering ${processingOps.length / 2} operations from processing queue`);
-      const multi = this.redisClient.multi();
+    const processingKeys = await this.redisClient.keys('queue:*:processing');
+    
+    for (const processingKey of processingKeys) {
+      const [_, chain, contract] = processingKey.split(':');
+      const mainKey = this.getQueueKey(chain, contract);
       
-      // Move operations back to the main queue while maintaining block height order
-      for (let i = 0; i < processingOps.length; i += 2) {
-        const [operationJson, blockHeight] = [processingOps[i], processingOps[i + 1]];
-        multi.zadd(this.QUEUE_KEY, parseInt(blockHeight), operationJson);
+      const operations = await this.redisClient.zrange(processingKey, 0, -1, 'WITHSCORES');
+      
+      if (operations.length > 0) {
+        const multi = this.redisClient.multi();
+        
+        for (let i = 0; i < operations.length; i += 2) {
+          const [operationJson, blockHeight] = [operations[i], operations[i + 1]];
+          multi.zadd(mainKey, parseInt(blockHeight), operationJson);
+        }
+        
+        multi.del(processingKey);
+        await multi.exec();
+        
+        Logger.log(`Recovered ${operations.length / 2} operations for ${chain}:${contract}`);
       }
-      
-      // Clear the processing queue
-      multi.del(this.PROCESSING_QUEUE_KEY);
-      await multi.exec();
     }
   }
 
@@ -81,26 +100,26 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
   async publishOperation(operation: { name: string; args: any[] }) {
     Logger.debug(`Publishing operation: ${operation.name}`);
     await this.ensureInitialized();
+    
     try {
+      const chain = operation.args[0];     // Chain name is first argument
+      const contract = operation.args[1].toString('hex');  // Contract address is second argument
       const blockHeight = operation.args[2]; // Block height
-      const eventId = operation.args[3];     // Event ID is always the fourth argument
-      const chainName = operation.args[0];   // Chain name is first argument
-      const contractAddress = operation.args[1].toString('hex'); // Contract address is second argument
-      
-      // Create a unique key for this event
-      const eventKey = `${chainName}:${contractAddress}:${eventId}`;
+      const eventId = operation.args[3];     // Event ID
 
-      // Check if we've already processed this event using Redis SETNX
-      const wasSet = await this.redisClient.sadd(this.PROCESSED_EVENTS_SET, eventKey);
+      // Check if already processed
+      const processedKey = this.getProcessedSetKey(chain, contract);
+      const wasSet = await this.redisClient.sadd(processedKey, eventId);
       
       if (!wasSet) {
-        Logger.debug(`Event already processed or queued: ${eventKey}`);
+        Logger.debug(`Event already processed or queued: ${eventId} for ${chain}:${contract}`);
         return;
       }
 
+      const queueKey = this.getQueueKey(chain, contract);
       const serializedOperation = this.serializeOperation(operation);
-      await this.redisClient.zadd(this.QUEUE_KEY, blockHeight, serializedOperation);
-      Logger.debug(`Published operation: ${operation.name} for block ${blockHeight}`);
+      await this.redisClient.zadd(queueKey, blockHeight, serializedOperation);
+      Logger.debug(`Published operation: ${operation.name} for block ${blockHeight} to queue ${queueKey}`);
     } catch (error) {
       Logger.error(`Error in publishOperation: ${error.message}`, error);
       throw error;
@@ -113,44 +132,54 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     
     while (true) {
       try {
-        const result = await this.redisClient
-          .multi()
-          .zrange(this.QUEUE_KEY, 0, 0, 'WITHSCORES')
-          .zremrangebyrank(this.QUEUE_KEY, 0, 0)
-          .exec();
-
-        if (!result || !result[0][1] || (result[0][1] as string[]).length === 0) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          continue;
-        }
-
-        const [operationJson, blockHeight] = (result[0][1] as string[]);
-        await this.redisClient.zadd(this.PROCESSING_QUEUE_KEY, parseInt(blockHeight), operationJson);
+        // Get all queue keys
+        const queueKeys = await this.redisClient.keys('queue:*:main');
         
-        const operation = this.deserializeOperation(operationJson);
-        Logger.debug(`Processing operation: ${operation.name} from block ${blockHeight}`);
+        for (const queueKey of queueKeys) {
+          const [_, chain, contract] = queueKey.split(':');
+          
+          // Skip if queue is paused
+          if (this.isQueuePaused(chain, contract)) {
+            continue;
+          }
 
-        try {
-          await callback(operation);
-          await this.redisClient.zrem(this.PROCESSING_QUEUE_KEY, operationJson);
-          Logger.debug(`Successfully processed operation: ${operation.name} from block ${blockHeight}`);
-        } catch (error) {
-          if (error.message?.includes('duplicate key value violates unique constraint')) {
-            // If it's a duplicate error, just remove from processing queue and continue
-            await this.redisClient.zrem(this.PROCESSING_QUEUE_KEY, operationJson);
-            Logger.log(`Duplicate event detected, skipping: ${operation.args[3]}`);
-          } else {
-            // For other errors, move to failed queue
+          const result = await this.redisClient
+            .multi()
+            .zrange(queueKey, 0, 0, 'WITHSCORES')
+            .zremrangebyrank(queueKey, 0, 0)
+            .exec();
+
+          if (!result || !result[0][1] || (result[0][1] as string[]).length === 0) {
+            continue;
+          }
+
+          const [operationJson, blockHeight] = (result[0][1] as string[]);
+          const processingKey = this.getQueueKey(chain, contract, 'processing');
+          
+          await this.redisClient.zadd(processingKey, parseInt(blockHeight), operationJson);
+          
+          const operation = this.deserializeOperation(operationJson);
+          Logger.debug(`Processing operation: ${operation.name} from block ${blockHeight} for ${chain}:${contract}`);
+
+          try {
+            await callback(operation);
+            await this.redisClient.zrem(processingKey, operationJson);
+            Logger.debug(`Successfully processed operation: ${operation.name} from block ${blockHeight}`);
+          } catch (error) {
+            const failedKey = this.getQueueKey(chain, contract, 'failed');
+            
             await this.redisClient
               .multi()
-              .zrem(this.PROCESSING_QUEUE_KEY, operationJson)
-              .zadd(this.FAILED_QUEUE_KEY, parseInt(blockHeight), operationJson)
+              .zrem(processingKey, operationJson)
+              .zadd(queueKey, parseInt(blockHeight), operationJson) // Put back at front of main queue
               .exec();
-            
-            Logger.error(`Failed to process operation ${operation.name} from block ${blockHeight}, moved to failed queue:`, error);
-            await this.handleFailedOperations();
+
+            Logger.error(`Failed to process operation for ${chain}:${contract}, pausing queue`, error);
+            this.pauseQueue(chain, contract);
           }
         }
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
         Logger.error('Error in operation consumption loop:', error);
         await new Promise(resolve => setTimeout(resolve, 5000));
@@ -158,35 +187,19 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async handleFailedOperations(): Promise<void> {
-    while (true) {
-      // Check if there are any failed operations
-      const failedOps = await this.redisClient.zrange(this.FAILED_QUEUE_KEY, 0, -1, 'WITHSCORES');
-      if (failedOps.length === 0) {
-        break;
-      }
-
-      // Get the lowest block height operation from failed queue
-      const [operationJson, blockHeight] = [failedOps[0], failedOps[1]];
-
-      // Move back to main queue and maintain ordering
-      await this.redisClient
-        .multi()
-        .zrem(this.FAILED_QUEUE_KEY, operationJson)
-        .zadd(this.QUEUE_KEY, parseInt(blockHeight), operationJson)
-        .exec();
-
-      Logger.log(`Moved failed operation from block ${blockHeight} back to main queue for retry`);
-      
-      // Wait before retrying
-      await new Promise(resolve => setTimeout(resolve, 5000));
+  private isQueuePaused(chain: string, contract: string): boolean {
+    const resumeTime = this.pausedQueues.get(`${chain}:${contract}`);
+    if (!resumeTime) return false;
+    
+    if (Date.now() >= resumeTime) {
+      this.pausedQueues.delete(`${chain}:${contract}`);
+      return false;
     }
+    return true;
   }
 
-  private async ensureInitialized() {
-    if (!this.isInitialized) {
-      await this.initialize();
-    }
+  private pauseQueue(chain: string, contract: string) {
+    this.pausedQueues.set(`${chain}:${contract}`, Date.now() + this.RETRY_DELAY_MS);
   }
 
   private serializeOperation(operation: { name: string; args: any[] }): string {
@@ -213,5 +226,11 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
       }
       return value;
     });
+  }
+
+  private async ensureInitialized() {
+    if (!this.isInitialized) {
+      await this.initialize();
+    }
   }
 }
