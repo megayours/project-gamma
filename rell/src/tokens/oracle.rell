@@ -5,54 +5,6 @@ operation register_chain(_chain: name) {
   create chain(chain);
 }
 
-operation process_mint_event(_chain: name, address: byte_array, block_height: integer, event_id: text, token_id: big_integer, token_name: text, metadata: json, to: byte_array, amount: big_integer) {
-  require_oracle();
-
-  val chain = _chain.lower_case();
-  val contract = require(
-    contract @? { .chain.name == chain, .address == address },
-    "Contract not found"
-  );
-  require(contract.block_height <= block_height, "Provided block height %s is not greater than or equals the last processed block height %s".format(block_height, contract.block_height));
-
-  create processed_event(contract, event_id);
-  contract.block_height = block_height;
-
-  val external_token = yours.external.external_token @? { .chain == chain, .contract == address, .token.id == token_id };
-  if (external_token != null) return;
-
-  val project = yours.project_info(contract.project, chain_context.blockchain_rid);
-  val token_info = yours.token_info(
-    project,
-    collection = contract.collection,
-    type = yours.token_type.external,
-    name = token_name,
-    modules = []
-  );
-  val token = yours.create_token_with_id(token_info, token_id);
-
-  val account = yours.external._ensure_evm_account(to);
-  yours.external._attach(token, chain, address, account, amount);
-
-  yours._mint(token, yours.balance_info(account, amount));
-
-  val attributes = yours._json_to_gtv_map(metadata);
-  yours._import_attributes(token, attributes);
-
-  // create tracked_token(contract, token_id, metadata, to);
-  send_message(_format_topic(chain, address), yours.external.mint_message(
-    project = contract.project,
-    collection = contract.collection,
-    token_id = token_id,
-    token_name = token_name,
-    metadata = metadata,
-    to = to,
-    amount = amount,
-    chain = chain,
-    contract = address,
-  ).to_gtv());
-}
-
 operation process_transfer_event(_chain: name, address: byte_array, block_height: integer, event_id: text, token_id: big_integer, from: byte_array, to: byte_array, amount: big_integer) {
   require_oracle();
 
@@ -67,12 +19,15 @@ operation process_transfer_event(_chain: name, address: byte_array, block_height
   contract.block_height = block_height;
 
   val external_token = yours.external.external_token @? { .chain == chain, .contract == address, .token.id == token_id };
-  if (external_token == null) return;
+  if (external_token == null) {
+    process_mint_event(contract, block_height, event_id, token_id, to, amount);
+    return;
+  }
 
   val token = external_token.token;
   val from_account = require(
     ft4.accounts.account @? { .id == from },
-    "From account not found: %s when it should have been created at mint/previous transfer time".format(from)
+    "Unable to process transfer event for %s:%s:%s. From account not found: %s when it should have been created at mint/previous transfer time".format(chain, address, token_id.to_text(), from)
   );
   val to_account = yours.external._ensure_evm_account(to);
   yours._transfer(token, yours.transfer_info(from = from_account, to = to_account, amount = amount));
@@ -107,5 +62,33 @@ operation process_metadata_update(_chain: name, address: byte_array, token_id: b
     metadata = metadata,
     chain = chain,
     contract = address,
+  ).to_gtv());
+}
+
+function process_mint_event(contract, block_height: integer, event_id: text, token_id: big_integer, to: byte_array, amount: big_integer) {
+  val project = yours.project_info(contract.project, chain_context.blockchain_rid);
+  val token_info = yours.token_info(
+    project,
+    collection = contract.collection,
+    type = yours.token_type.external,
+    name = "TBD",
+    modules = []
+  );
+  val token = yours.create_token_with_id(token_info, token_id);
+
+  val account = yours.external._ensure_evm_account(to);
+  yours.external._attach(token, contract.chain.name, contract.address, account, amount);
+
+  yours._mint(token, yours.balance_info(account, amount));
+
+  // create tracked_token(contract, token_id, metadata, to);
+  send_message(_format_topic(contract.chain.name, contract.address), yours.external.mint_message(
+    project = contract.project,
+    collection = contract.collection,
+    token_id = token_id,
+    to = to,
+    amount = amount,
+    chain = contract.chain.name,
+    contract = contract.address,
   ).to_gtv());
 }

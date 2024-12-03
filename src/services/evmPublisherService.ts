@@ -108,7 +108,7 @@ export class EvmPublisherService implements OnModuleInit {
 
     while (retryCount < Constants.MAX_RETRIES) {
       try {
-        Logger.log(`Processing historical events for contract ${contractInfo.address} on chain ${contractInfo.chainId} from block ${fromBlock} to ${toBlock}`);
+        Logger.debug(`Processing historical events for contract ${contractInfo.address} on chain ${contractInfo.chainId} from block ${fromBlock} to ${toBlock}`);
 
         const filter = contract.filters.Transfer();
         const events = await contract.queryFilter(filter, fromBlock, toBlock);
@@ -160,6 +160,8 @@ export class EvmPublisherService implements OnModuleInit {
           tokenId: BigInt(ethEvent.topics[3]),
         };
 
+        Logger.log(`Block ${event.blockNumber}, tokenId: ${event.tokenId} sent from ${event.from} to ${event.to}`);
+
         const isProcessed = await this.chromiaService.isEventProcessed(chainName, contractAddress, event.id);
         if (isProcessed) {
           Logger.log(`Event already processed: ${event.id}`);
@@ -168,7 +170,7 @@ export class EvmPublisherService implements OnModuleInit {
 
         const operation = await this.createOperation(event);
         await this.queueService.publishOperation(operation);
-        Logger.log(`Published to queue: ${operation.name}, chain: ${chainName}, contract: ${contractAddress}, block: ${event.blockNumber}, tokenId: ${event.tokenId}`);
+        Logger.debug(`Published to queue: ${operation.name}, chain: ${chainName}, contract: ${contractAddress}, block: ${event.blockNumber}, tokenId: ${event.tokenId}`);
       }
     } catch (error) {
       if (error instanceof TokenDoesNotExistError) {
@@ -198,32 +200,16 @@ export class EvmPublisherService implements OnModuleInit {
   private async createOperation(event: Event): Promise<{ name: string; args: any[] }> {
     const { chainName, contractAddress, blockNumber, id: eventId } = event;
 
-    const hasMintOccurred = await this.chromiaService.hasMintOccured(chainName, contractAddress, event.tokenId);
-
-    if (!hasMintOccurred) {
-      const metadata = await this.metadataService.getTokenMetadata(chainName, contractAddress, 'erc721', event.tokenId);
-      return this.chromiaService.createMintEventOperation(
-        chainName,
-        contractAddress,
-        blockNumber,
-        eventId,
-        typeof event.tokenId === 'bigint' ? event.tokenId : BigInt(event.tokenId),
-        event.to,
-        BigInt(1), // ERC721 always transfers 1 token
-        metadata
-      );
-    } else {
-      return this.chromiaService.createTransferEventOperation(
-        chainName,
-        contractAddress,
-        blockNumber,
-        eventId,
-        typeof event.tokenId === 'bigint' ? event.tokenId : BigInt(event.tokenId),
-        event.from,
-        event.to,
-        BigInt(1) // ERC721 always transfers 1 token
-      );
-    }
+    return this.chromiaService.createTransferEventOperation(
+      chainName,
+      contractAddress,
+      blockNumber,
+      eventId,
+      typeof event.tokenId === 'bigint' ? event.tokenId : BigInt(event.tokenId),
+      event.from,
+      event.to,
+      BigInt(1) // ERC721 always transfers 1 token
+    );
   }
 
   private async startMetadataUpdateProcess(): Promise<void> {

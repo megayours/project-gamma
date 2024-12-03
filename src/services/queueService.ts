@@ -68,31 +68,6 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     }, Constants.QUEUE_CHECK_INTERVAL_MS);
   }
 
-  private async recoverInProgressOperations() {
-    const processingKeys = await this.redisClient.keys('queue:*:processing');
-    
-    for (const processingKey of processingKeys) {
-      const [_, chain, contract] = processingKey.split(':');
-      const mainKey = this.getQueueKey(chain, contract);
-      
-      const operations = await this.redisClient.zrange(processingKey, 0, -1, 'WITHSCORES');
-      
-      if (operations.length > 0) {
-        const multi = this.redisClient.multi();
-        
-        for (let i = 0; i < operations.length; i += 2) {
-          const [operationJson, blockHeight] = [operations[i], operations[i + 1]];
-          multi.zadd(mainKey, parseInt(blockHeight), operationJson);
-        }
-        
-        multi.del(processingKey);
-        await multi.exec();
-        
-        Logger.log(`Recovered ${operations.length / 2} operations for ${chain}:${contract}`);
-      }
-    }
-  }
-
   public async getQueueSize(): Promise<number> {
     return this.redisClient.zcard(this.QUEUE_KEY);
   }
@@ -142,47 +117,87 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
           if (this.isQueuePaused(chain, contract)) {
             continue;
           }
-
+  
+          // Get the last processed block height for this chain+contract
+          const lastProcessedKey = `last_processed:${chain}:${contract}`;
+          const lastProcessedHeight = await this.redisClient.get(lastProcessedKey) || '0';
+          
+          // Get the next operation that's after the last processed block
           const result = await this.redisClient
             .multi()
-            .zrange(queueKey, 0, 0, 'WITHSCORES')
-            .zremrangebyrank(queueKey, 0, 0)
+            .zrangebyscore(queueKey, `(${lastProcessedHeight}`, '+inf', 'WITHSCORES', 'LIMIT', 0, 1)
             .exec();
-
+  
           if (!result || !result[0][1] || (result[0][1] as string[]).length === 0) {
             continue;
           }
-
+  
           const [operationJson, blockHeight] = (result[0][1] as string[]);
           const processingKey = this.getQueueKey(chain, contract, 'processing');
           
-          await this.redisClient.zadd(processingKey, parseInt(blockHeight), operationJson);
+          // Move to processing and remove from main queue
+          await this.redisClient
+            .multi()
+            .zadd(processingKey, parseInt(blockHeight), operationJson)
+            .zrem(queueKey, operationJson)
+            .exec();
           
           const operation = this.deserializeOperation(operationJson);
           Logger.debug(`Processing operation: ${operation.name} from block ${blockHeight} for ${chain}:${contract}`);
-
+  
           try {
             await callback(operation);
-            await this.redisClient.zrem(processingKey, operationJson);
-            Logger.debug(`Successfully processed operation: ${operation.name} from block ${blockHeight}`);
-          } catch (error) {
-            const failedKey = this.getQueueKey(chain, contract, 'failed');
-            
             await this.redisClient
               .multi()
               .zrem(processingKey, operationJson)
-              .zadd(queueKey, parseInt(blockHeight), operationJson) // Put back at front of main queue
+              .set(lastProcessedKey, blockHeight) // Update last processed block height
               .exec();
-
+            Logger.debug(`Successfully processed operation: ${operation.name} from block ${blockHeight}`);
+          } catch (error) {
+            // On failure, move back to main queue and pause
+            await this.redisClient
+              .multi()
+              .zrem(processingKey, operationJson)
+              .zadd(queueKey, parseInt(blockHeight), operationJson)
+              .exec();
+  
             Logger.error(`Failed to process operation for ${chain}:${contract}, pausing queue`, error);
             this.pauseQueue(chain, contract);
           }
         }
-
+  
         await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
         Logger.error('Error in operation consumption loop:', error);
         await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+    }
+  }
+  
+  // Add this method to handle recovery of last processed blocks
+  async recoverInProgressOperations() {
+    const processingKeys = await this.redisClient.keys('queue:*:processing');
+    
+    for (const processingKey of processingKeys) {
+      const [_, chain, contract] = processingKey.split(':');
+      const mainKey = this.getQueueKey(chain, contract);
+      
+      const operations = await this.redisClient.zrange(processingKey, 0, -1, 'WITHSCORES');
+      
+      if (operations.length > 0) {
+        const multi = this.redisClient.multi();
+        
+        for (let i = 0; i < operations.length; i += 2) {
+          const [operationJson, blockHeight] = [operations[i], operations[i + 1]];
+          multi.zadd(mainKey, parseInt(blockHeight), operationJson);
+        }
+        
+        multi.del(processingKey);
+        // Reset the last processed block height on recovery
+        multi.del(`last_processed:${chain}:${contract}`);
+        await multi.exec();
+        
+        Logger.log(`Recovered ${operations.length / 2} operations for ${chain}:${contract}`);
       }
     }
   }

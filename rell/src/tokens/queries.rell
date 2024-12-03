@@ -52,7 +52,7 @@ query get_token(chain: name, address: byte_array, token_id: big_integer) {
     project = .token.collection.project.name,
     collection = .token.collection.name,
     token_id = .token.id,
-    owner = .owner,
+    owner = .owner.id,
     metadata = yours.get_metadata(.token),
     type = .token.type
   );
