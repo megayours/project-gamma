@@ -5,7 +5,7 @@ import { Logger, LogLevel } from './utils/logger';
 
 async function bootstrap() {
   // Set log level based on environment variable
-  Logger.setLogLevel(LogLevel.INFO);
+  Logger.setLogLevel(LogLevel.DEBUG);
 
   const app = await NestFactory.create(AppModule);
   const port = process.env.API_PORT || 3000;
