@@ -160,7 +160,7 @@ export class EvmPublisherService implements OnModuleInit {
           tokenId: BigInt(ethEvent.topics[3]),
         };
 
-        Logger.log(`Block ${event.blockNumber}, tokenId: ${event.tokenId} sent from ${event.from} to ${event.to}`);
+        Logger.log(`Block ${event.blockNumber}, contract: ${chainName}:${contractAddress}, tokenId: ${event.tokenId} sent from ${event.from} to ${event.to}`);
 
         const isProcessed = await this.chromiaService.isEventProcessed(chainName, contractAddress, event.id);
         if (isProcessed) {
