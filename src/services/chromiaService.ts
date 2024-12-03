@@ -150,7 +150,6 @@ export class ChromiaService implements OnModuleInit {
       Logger.log(`Processed batch of ${unprocessedOperations.length} events (${operations.length - unprocessedOperations.length} were already processed)`);
     } catch (error) {
       Logger.error('Error processing batch of events:', error);
-      Logger.error(`Failed operations: ${JSON.stringify(operations)}`);
       throw error;
     }
   }
