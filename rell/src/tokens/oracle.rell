@@ -28,6 +28,7 @@ operation process_transfer_event(_chain: name, address: byte_array, block_height
   val from_account = external_token.owner;
   val to_account = yours.external._ensure_evm_account(to);
   yours._transfer(token, yours.transfer_info(from = from_account, to = to_account, amount = amount));
+  external_token.owner = to_account;
 
   send_message(_format_topic(chain, address), yours.external.transfer_message(
     token_id = token_id,
