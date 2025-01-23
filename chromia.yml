@@ -3,12 +3,7 @@ definitions:
     gtx:
       modules:
         - "net.postchain.d1.icmf.IcmfSenderGTXModule"
-  - &receiver # Base configuration for a chain that receives messages
-    gtx:
-      modules:
-        - "net.postchain.d1.icmf.IcmfReceiverGTXModule"
-    sync_ext:
-      - "net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension"
+        - "net.postchain.d1.iccf.IccfGTXModule"
 
 blockchains:
   # Old - to be removed after demo
@@ -44,7 +39,7 @@ libs:
     registry: git@github.com:megayours/yours-protocol.git
     path: src/lib/yours
     tagOrBranch: main
-    rid: x"B3CBBDFA168F9D7861691AA24094E63A27E7D8FB0EE549034B205796F7C6369E"
+    rid: x"4AE3DD3860C3D7CCCBB56066A582D9B7CF4426D03B72D939BE1AD832F017C975"
     insecure: false
 
 compile:
@@ -72,6 +67,10 @@ deployments:
     brid: x"58FE4D15AA5BDA450CC8E55F7ED63004AB1D2535A123F860D1643FD4108809E3"
     container: gamma
     chains:
-      gamma: x"40BDCDEC1FB61FDB6FFAE80507EEB3D63E800806C7C1DE63ABD106C6DA7A8B46"
-
-
+      gamma: x"DAB5C4E699AB5777EBBC4186017A3E89CE877E9D2EC4FCA48E59417D3C408DA2"
+  testnet:
+    url: https://node0.testnet.chromia.com:7740
+    brid: x"6F1B061C633A992BF195850BF5AA1B6F887AEE01BB3F51251C230930FB792A92"
+    container: "439f7892a6edf4534859c382ae156fb62c29094edad8e371b0ca44b55471e831"
+    chains:
+      gamma: x"A902CECEE7F557D3104BA5626C22C32A9971FE975FF5AA9EBC97BE3EB9BCBD85"

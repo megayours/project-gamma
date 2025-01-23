@@ -27,17 +27,20 @@ operation process_transfer_event(_chain: name, address: byte_array, block_height
   val token = external_token.token;
   val from_account = external_token.owner;
   val to_account = yours.external._ensure_evm_account(to);
-  yours._transfer(token, yours.transfer_info(from = from_account, to = to_account, amount = amount));
+  yours._transfer(token, yours.transfer_info(from = from_account, to = to_account, amount = amount), chain_context.blockchain_rid);
   external_token.owner = to_account;
 
-  send_message(_format_topic(chain, address), yours.external.transfer_message(
+  val transfer_message = yours.external.transfer_message(
     token_id = token_id,
     from = from_account.id,
     to = to,
     amount = amount,
     chain = chain,
     contract = address,
-  ).to_gtv());
+  ).to_gtv();
+
+  send_message(_format_topic(chain, address), [integer(2).to_gtv(), transfer_message].to_gtv());
+  yours.external._handle_message(chain_context.blockchain_rid, _format_topic(chain, address), transfer_message);
 }
 
 operation process_metadata_update(_chain: name, address: byte_array, token_id: big_integer, metadata: json) {
@@ -55,12 +58,14 @@ operation process_metadata_update(_chain: name, address: byte_array, token_id: b
   val attributes = yours._json_to_gtv_map(metadata);
   yours._import_attributes(external_token.token, attributes);
 
-  send_message(_format_topic(chain, address), yours.external.metadata_updated_message(
+  val metadata_message = yours.external.metadata_updated_message(
     token_id = token_id,
     metadata = metadata,
     chain = chain,
     contract = address,
-  ).to_gtv());
+  ).to_gtv();
+
+  send_message(_format_topic(chain, address), [integer(1).to_gtv(), metadata_message].to_gtv());
 }
 
 function process_mint_event(contract, block_height: integer, event_id: text, token_id: big_integer, to: byte_array, amount: big_integer) {
@@ -77,10 +82,9 @@ function process_mint_event(contract, block_height: integer, event_id: text, tok
   val account = yours.external._ensure_evm_account(to);
   yours.external._attach(token, contract.chain.name, contract.address, account, amount);
 
-  yours._mint(token, yours.balance_info(account, amount));
+  yours._mint(token, yours.balance_info(account, amount), chain_context.blockchain_rid);
 
-  // create tracked_token(contract, token_id, metadata, to);
-  send_message(_format_topic(contract.chain.name, contract.address), yours.external.mint_message(
+  val mint_message = yours.external.mint_message(
     project = contract.project,
     collection = contract.collection,
     token_id = token_id,
@@ -88,5 +92,7 @@ function process_mint_event(contract, block_height: integer, event_id: text, tok
     amount = amount,
     chain = contract.chain.name,
     contract = contract.address,
-  ).to_gtv());
+  ).to_gtv();
+
+  send_message(_format_topic(contract.chain.name, contract.address), [integer(0).to_gtv(), mint_message].to_gtv());
 }
