@@ -141,6 +141,8 @@ export class EvmPublisherService implements OnModuleInit {
 
         await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Backoff
       }
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
 
