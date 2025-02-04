@@ -12,7 +12,7 @@ import { ethers } from 'ethers';
 import { createEventId } from '../utils/event';
 import { Constants } from '../utils/constants';
 import { toAddressHexFromBuffer } from '../utils/address';
-import { client } from 'src/utils/posthog';
+import { client } from '../utils/posthog';
 
 @Injectable()
 export class EvmPublisherService implements OnModuleInit {

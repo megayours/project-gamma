@@ -3,7 +3,7 @@ import { Logger } from '../utils/logger';
 import { ChromiaService } from './chromiaService';
 import { QueueService } from './queueService';
 import { Constants } from '../utils/constants';
-import { client } from 'src/utils/posthog';
+import { client } from '../utils/posthog';
 
 @Injectable()
 export class EventProcessorService implements OnModuleInit, OnModuleDestroy {
