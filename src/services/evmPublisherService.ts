@@ -12,6 +12,7 @@ import { ethers } from 'ethers';
 import { createEventId } from '../utils/event';
 import { Constants } from '../utils/constants';
 import { toAddressHexFromBuffer } from '../utils/address';
+import posthog from 'posthog-js';
 
 @Injectable()
 export class EvmPublisherService implements OnModuleInit {
@@ -90,7 +91,9 @@ export class EvmPublisherService implements OnModuleInit {
     }
 
     while (fromBlock <= currentBlock) {
-      if (await this.queueService.getQueueSize() > Constants.QUEUE_SIZE_THRESHOLD) {
+      const queueSize = await this.queueService.getQueueSize();
+      posthog.capture('queue_size', { amount: queueSize });
+      if (queueSize > Constants.QUEUE_SIZE_THRESHOLD) {
         Logger.log(`Queue size is too high, throttling for 60 seconds`);
         await new Promise(resolve => setTimeout(resolve, Constants.ONE_MINUTE_MS));
         continue;
@@ -112,6 +115,7 @@ export class EvmPublisherService implements OnModuleInit {
 
         const filter = contract.filters.Transfer();
         const events = await contract.queryFilter(filter, fromBlock, toBlock);
+        posthog.capture('events_fetched', { chain: contractInfo.chainId, contract: contractInfo.address, event_fetch_count: events.length });
 
         for (const event of events) {
           await this.handleContractEvent(contractInfo.chainId, contractInfo.address, event);
@@ -289,6 +293,7 @@ export class EvmPublisherService implements OnModuleInit {
       if (!this.isMetadataEqual(newMetadata, token.metadata)) {
         await this.chromiaService.updateTokenMetadata(token.chain, token.address, token.token_id, newMetadata);
         Logger.log(`Updated metadata for token ${token.token_id} on contract ${token.address.toString('hex')} (${token.chain})`);
+        posthog.capture('metadata_updated', { chain: token.chain, contract: token.address.toString('hex'), token_id: token.token_id });
       }
     } catch (error) {
       Logger.error(`Error processing metadata for token ${token.token_id} on contract ${token.address} (${token.chain}):`, error);

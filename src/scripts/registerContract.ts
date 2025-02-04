@@ -35,7 +35,7 @@ async function registerContract() {
   }
 
   const client = await createClient({
-    nodeUrlPool: [nodeUrl],
+    directoryNodeUrlPool: [nodeUrl],
     blockchainRid,
   });
 

@@ -1,0 +1,4 @@
+@extend(yours.authorized_oracle_transfer)
+function authorized_oracle_transfer(): boolean {
+    return true;
+}

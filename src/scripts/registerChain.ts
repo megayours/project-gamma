@@ -22,7 +22,7 @@ async function registerChain() {
   }
 
   const client = await createClient({
-    nodeUrlPool: [nodeUrl],
+    directoryNodeUrlPool: [nodeUrl],
     blockchainRid,
   });
 

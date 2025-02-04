@@ -1,5 +1,5 @@
 function require_oracle() {
-
+  require(op_context.is_signer(chain_context.args.oracle_pubkey), "Oracle is not a signer");
 }
 
 function _format_topic(chain: name, address: byte_array) {

@@ -26,6 +26,7 @@
     "ethers": "^6.13.4",
     "ioredis": "^5.4.1",
     "postchain-client": "^1.19.0",
+    "posthog-js": "^1.215.3",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.0",
     "yargs": "^17.7.2"

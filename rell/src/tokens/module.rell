@@ -12,3 +12,7 @@ namespace yours {
 }
 
 import lib.icmf.{ send_message };
+
+struct module_args {
+  oracle_pubkey: byte_array;
+}

@@ -83,3 +83,39 @@ query get_owned_tokens(owner: byte_array) {
     metadata = yours.get_metadata(et.token)
   );
 }
+
+query get_token_after(rowid: integer) {
+  val token_data = yours.external.external_token @? { .rowid > rowid(rowid) } (
+    rowid = .rowid,
+    chain = .chain,
+    contract = .contract,
+    owner_account_id = .owner.id,
+    token = (
+      project = (
+        name = .token.collection.project.name,
+        blockchain_rid = .token.collection.project.blockchain_rid
+      ),
+      collection = .token.collection.name,
+      token_id = .token.id,
+      metadata = yours.get_metadata(.token)
+    )
+  ) limit 1;
+
+  if (token_data == null) return null;
+
+  val owner_external_address = (main_ad: ft4.accounts.main_auth_descriptor, signer: ft4.accounts.auth_descriptor_signer) @? {
+    main_ad.account.id == token_data.owner_account_id,
+    main_ad.auth_descriptor == signer.account_auth_descriptor
+  } (
+    signer.id
+  ) limit 1;
+
+  return (
+    rowid = token_data.rowid,
+    chain = token_data.chain,
+    contract = token_data.contract,
+    owner_account_id = token_data.owner_account_id,
+    owner_external_address = owner_external_address,
+    token = token_data.token
+  );
+}

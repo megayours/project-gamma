@@ -3,6 +3,7 @@ import { Logger } from '../utils/logger';
 import { ChromiaService } from './chromiaService';
 import { QueueService } from './queueService';
 import { Constants } from '../utils/constants';
+import posthog from 'posthog-js';
 
 @Injectable()
 export class EventProcessorService implements OnModuleInit, OnModuleDestroy {
@@ -82,6 +83,7 @@ export class EventProcessorService implements OnModuleInit, OnModuleDestroy {
     try {
       await this.chromiaService.batchProcessEvents(batchToProcess);
       Logger.log(`Published batch of ${batchToProcess.length} operations`);
+      posthog.capture('events_published', { batch_size: batchToProcess.length });
     } catch (error) {
       Logger.error('Error processing operation batch:', error);
       // Add failed operations back to the batch

@@ -16,6 +16,9 @@ blockchains:
     module: main
     config:
       <<: *sender
+    moduleArgs:
+      tokens:
+        oracle_pubkey: x"03D4736A1971530DD9D5731B2CBDE2E0FA526AF5DAB769A2093744FAC6FEC504C6"
 
 libs:
   ft4:
@@ -39,7 +42,7 @@ libs:
     registry: git@github.com:megayours/yours-protocol.git
     path: src/lib/yours
     tagOrBranch: main
-    rid: x"4AE3DD3860C3D7CCCBB56066A582D9B7CF4426D03B72D939BE1AD832F017C975"
+    rid: x"956000CA54F7472820353F669231D5FA8FFDF868897E6510AC4D1603B3B46002"
     insecure: false
 
 compile:
