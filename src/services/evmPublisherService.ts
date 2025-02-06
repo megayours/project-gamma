@@ -224,7 +224,7 @@ export class EvmPublisherService implements OnModuleInit {
 
     while (true) {
       try {
-        Logger.debug(`Fetching tokens from rowId ${afterRowId}`);
+        Logger.log(`Metadata update process: Fetching tokens from rowId ${afterRowId}`);
         const tokens = await this.chromiaService.getKnownTokens(afterRowId, PAGE_SIZE);
         Logger.debug(`Found ${tokens.length} tokens to check for metadata updates`);
         if (tokens.length === 0) {
@@ -238,7 +238,7 @@ export class EvmPublisherService implements OnModuleInit {
         }
 
         afterRowId = tokens[tokens.length - 1].rowid;
-        await new Promise(resolve => setTimeout(resolve, 5000)); // 5 second delay between batches
+        await new Promise(resolve => setTimeout(resolve, 500)); // 5 second delay between batches
       } catch (error) {
         Logger.error('Error in metadata update process:', error);
         await new Promise(resolve => setTimeout(resolve, 60000)); // Wait for 1 minute before retrying
@@ -277,6 +277,10 @@ export class EvmPublisherService implements OnModuleInit {
   }
 
   private async processTokenMetadata(token: TrackedToken): Promise<void> {
+    if (token.metadata.name !== 'TBD') {
+      Logger.log(`Token ${token.token_id} on contract ${token.address.toString('hex')} (${token.chain}) has no metadata to update`);
+      return;
+    }
     try {
       const contract = this.contractService.getContract(this.chainConfigService.getChainIdByName(token.chain), token.address.toString('hex'));
       if (!contract) {
