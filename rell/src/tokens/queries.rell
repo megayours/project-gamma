@@ -29,6 +29,27 @@ query list_minted_tokens(after_rowid: integer, take: integer) {
   ) limit take;
 }
 
+query list_minted_tokens_with_unattached_metadata(after_rowid: integer, take: integer) {
+  return (
+    c: contract,
+    et: yours.external.external_token,
+    @outer am: attached_metadata @* { .token == et.token }
+  ) @* { 
+    et.rowid > rowid(after_rowid),
+    c.chain.name == et.chain,
+    c.address == et.contract,
+    am == null
+  } ( 
+    chain = et.chain, 
+    address = et.contract, 
+    token_id = et.token.id,
+    rowid = et.rowid,
+    metadata = yours.get_metadata(et.token),
+    contract_type = c.type,
+    type = et.token.type
+  ) limit take;
+}
+
 query is_event_processed(chain: name, address: byte_array, event_id: text) {
   return processed_event @? { .contract.chain.name == chain.lower_case(), .contract.address == address, .event_id == event_id } != null;
 }

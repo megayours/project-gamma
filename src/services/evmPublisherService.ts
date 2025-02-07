@@ -29,10 +29,10 @@ export class EvmPublisherService implements OnModuleInit {
   ) { }
 
   async onModuleInit(): Promise<void> {
+    this.startMetadataUpdateProcess();
     await this.chromiaService.initialize();
     await this.initializeContracts();
     this.startContractMonitoring();
-    this.startMetadataUpdateProcess();
   }
 
   private async initializeContracts(): Promise<void> {
@@ -225,7 +225,7 @@ export class EvmPublisherService implements OnModuleInit {
     while (true) {
       try {
         Logger.log(`Metadata update process: Fetching tokens from rowId ${afterRowId}`);
-        const tokens = await this.chromiaService.getKnownTokens(afterRowId, PAGE_SIZE);
+        const tokens = await this.chromiaService.getKnownTokensWithUnattachedMetadata(afterRowId, PAGE_SIZE);
         Logger.debug(`Found ${tokens.length} tokens to check for metadata updates`);
         if (tokens.length === 0) {
           afterRowId = 0; // Reset to start

@@ -5,7 +5,6 @@ import { createClient, IClient, newSignatureProvider, SignatureProvider, Unexpec
 import { MetadataService } from './metadataService';
 import { ChainConfigService } from '../config/chainConfig';
 import { ContractInfo, ContractType, TrackedToken, ChainName, ContractAddress, TokenId } from '../types/blockchain';
-import { assert } from 'console';
 
 @Injectable()
 export class ChromiaService implements OnModuleInit {
@@ -135,6 +134,15 @@ export class ChromiaService implements OnModuleInit {
   async getKnownTokens(afterRowId: number, take: number): Promise<TrackedToken[]> {
     return this.withChromiaClient(async (client) => {
       return client.query<TrackedToken[]>('tokens.list_minted_tokens', {
+        after_rowid: afterRowId,
+        take
+      });
+    });
+  }
+
+  async getKnownTokensWithUnattachedMetadata(afterRowId: number, take: number): Promise<TrackedToken[]> {
+    return this.withChromiaClient(async (client) => {
+      return client.query<TrackedToken[]>('tokens.list_minted_tokens_with_unattached_metadata', {
         after_rowid: afterRowId,
         take
       });

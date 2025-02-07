@@ -13,3 +13,8 @@ entity contract {
 entity processed_event {
   key contract, event_id: text;
 }
+
+entity attached_metadata {
+  key yours.token;
+  mutable timestamp;
+}

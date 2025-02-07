@@ -46,7 +46,7 @@ libs:
     insecure: false
 
 compile:
-  rellVersion: 0.13.5
+  rellVersion: 0.13.10
   source: rell/src
 
 database:

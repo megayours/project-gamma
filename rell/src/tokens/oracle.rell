@@ -65,7 +65,24 @@ operation process_metadata_update(_chain: name, address: byte_array, token_id: b
     contract = address,
   ).to_gtv();
 
+  create attached_metadata(external_token.token, op_context.last_block_time);
   send_message(_format_topic(chain, address), [integer(1).to_gtv(), metadata_message].to_gtv());
+}
+
+operation batch_fix_attached_metadata(size: integer) {
+  val token_data = (
+    et: yours.external.external_token,
+    @outer am: attached_metadata @* { .token == et.token }
+  ) @* {
+    am == null,
+    et.token.name != "TBD"
+  } (
+    et.token
+  ) limit size;
+
+  for (token in token_data) {
+    create attached_metadata ( token, op_context.last_block_time );
+  }
 }
 
 function process_mint_event(contract, block_height: integer, event_id: text, token_id: big_integer, to: byte_array, amount: big_integer) {
